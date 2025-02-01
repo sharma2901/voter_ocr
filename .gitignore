@@ -1,3 +1,5 @@
 .DS_Store
 voter_data.json
 pdf/
+output/
+xtra/
