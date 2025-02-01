@@ -59,19 +59,30 @@ class VoterListExtractor:
                 details["husband_name"] = line.split(":")[-1].strip()
             elif "मकान" in line or "घर" in line:
                 details["house_number"] = line.split(":")[-1].strip() if ":" in line else line
-            elif "आयु" in line or "उम्र" in line:
-                age = ''.join(filter(str.isdigit, line))
-                details["age"] = age if age else ""
-            # More flexible gender detection
-            elif any(gender_term in line.lower() for gender_term in ["लिग", "िलंग"," िलंग", "लिंग"]):
-                print(f"Found gender line: {line}")  # Debug print
-                gender_text = line.split(":")[-1].strip() if ":" in line else line
-                gender_text = gender_text.lower()
-                if any(male_term in gender_text for male_term in ["पुरुष", "पुरष", "पुरुस"]):
-                    details["gender"] = "M"
-                elif any(female_term in gender_text for female_term in ["महिला", "स्त्री", "महीला", "स्त्रि"]):
-                    details["gender"] = "F"
-                print(f"Detected gender: {details['gender']}")  # Debug print
+            # Handle combined gender and age line
+            elif any(gender_term in line for gender_term in ["लिग", "िलंग"," िलंग", "लिंग"]):
+                print(f"Found gender/age line: {line}")  # Debug print
+                
+                # Split line by "आयु" to separate gender and age
+                parts = line.split("आयु")
+                
+                # Extract gender from first part
+                gender_part = parts[0]
+                if ":" in gender_part:
+                    gender_text = gender_part.split(":")[-1].strip()
+                    if "पुरुष" in gender_text or "पुरष" in gender_text or "पुरुस" in gender_text:
+                        details["gender"] = "पुरुष"
+                    elif "महिला" in gender_text or "स्त्री" in gender_text or "महीला" in gender_text:
+                        details["gender"] = "महिला"
+                
+                # Extract age from second part if it exists
+                if len(parts) > 1:
+                    age_part = parts[1]
+                    if ":" in age_part:
+                        age = ''.join(filter(str.isdigit, age_part.split(":")[-1]))
+                        details["age"] = age if age else ""
+                
+                print(f"Detected gender: {details['gender']}, age: {details['age']}")  # Debug print
         
         return details
 
