@@ -5,6 +5,7 @@ import numpy as np
 from pdf2image import convert_from_path
 import pytesseract
 from pathlib import Path
+import base64
 
 # Set Tesseract path for macOS
 pytesseract.pytesseract.tesseract_cmd = '/opt/homebrew/bin/tesseract'
@@ -42,6 +43,7 @@ class VoterListExtractor:
             "house_number": "",
             "age": "",
             "gender": "",
+            "photo": "",
             "raw_text": text
         }
         
@@ -130,6 +132,13 @@ class VoterListExtractor:
             x, y, w, h = cv2.boundingRect(contour)
             cell = gray[y:y+h, x:x+w]
 
+            # Extract photo (right side of the box, upper portion with 5% extra height)
+            photo_height = int(h//2 * 1.05)  # Add 5% to height
+            photo_region = cell[0:photo_height, 2*w//3:w]
+            # Convert photo to base64 for JSON storage
+            _, buffer = cv2.imencode('.jpg', photo_region)
+            photo_base64 = base64.b64encode(buffer).decode('utf-8')
+            
             # Extract voter ID (at bottom right of the box)
             voter_id_region = cell[3*h//4:h, 2*w//3:w]
             
@@ -172,11 +181,13 @@ class VoterListExtractor:
             
             # Parse details into structured format
             parsed_details = self.parse_voter_details(voter_details_text)
+            # Add photo to details
+            parsed_details["photo"] = photo_base64
 
             voter_info = {
                 "page_number": page_num,
                 "voter_id": voter_id,
-                "details": parsed_details
+                "details": parsed_details  # photo is now inside details
             }
             voters.append(voter_info)
 
@@ -208,7 +219,7 @@ class VoterListExtractor:
                 )[0]
                 
                 # Skip first two metadata pages
-                if page_num <= 2:
+                if page_num <= 2 or page_num == total_pages:
                     print(f"Skipping metadata page {page_num}")
                     continue
 
